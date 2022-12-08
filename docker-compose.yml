@@ -1,0 +1,33 @@
+version: '3.5'
+
+services:
+  postgres:
+    container_name: nestjs_postgres_container
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 444
+      PGDATA: /data/postgres
+    volumes:
+       - postgres:/data/postgres
+    ports:
+      - "6060:5432"
+    networks:
+      - database
+    restart: unless-stopped
+
+  adminer:
+    container_name: nestjs_adminer_container
+    image: adminer
+    ports:
+      - "5555:8080"
+    networks:
+      - database
+    restart: unless-stopped
+
+networks:
+  database:
+    driver: bridge
+
+volumes:
+    postgres:

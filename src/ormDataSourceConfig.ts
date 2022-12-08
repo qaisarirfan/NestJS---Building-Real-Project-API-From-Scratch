@@ -1,4 +1,4 @@
-import { DataSource } from "typeorm";
-import config from "./ormconfig";
+import { DataSource } from 'typeorm';
+import config from './ormconfig';
 
-export default new DataSource(config)
+export default new DataSource(config);
