@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { sign } from 'jsonwebtoken';
@@ -9,6 +9,8 @@ import { User } from './entities/user.entity';
 
 import { JWT_SECRET } from 'src/constants';
 import { UserResponseInterface } from './types/userResponse.interface';
+import { LoginDto } from './dto/login-user.dto';
+import { compare } from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -16,10 +18,56 @@ export class UserService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const userByEmail = await this.userRepository.findOne({
+      where: {
+        email: createUserDto.email,
+      },
+    });
+
+    const userByUsername = await this.userRepository.findOne({
+      where: {
+        username: createUserDto.username,
+      },
+    });
+    if (userByEmail || userByUsername) {
+      throw new HttpException(
+        'Email or username already taken.',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
     const newUser = new User();
     Object.assign(newUser, createUserDto);
     return this.userRepository.save(newUser);
+  }
+
+  async login(loginDto: LoginDto): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: {
+        email: loginDto.email,
+      },
+      select: ['id', 'email', 'username', 'bio', 'image', 'password'],
+    });
+
+    if (!user) {
+      throw new HttpException(
+        'Credentials are not valid.',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    const isPasswordCorrect = await compare(loginDto.password, user.password);
+
+    if (!isPasswordCorrect) {
+      throw new HttpException(
+        'Credentials are not valid.',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    delete user.password;
+
+    return user;
   }
 
   generateJwt(user: User) {
